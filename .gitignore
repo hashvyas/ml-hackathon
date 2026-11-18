@@ -7,3 +7,5 @@ venv/
 # generated data (raw data in data/train, data/student_test is committed and read-only)
 data/processed/*
 !data/processed/.gitkeep
+evaluator_test/
+data/
