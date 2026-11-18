@@ -1,0 +1,2 @@
+trip_id,classifier_hmm,classifier_only,hmm_gain,likely_cause,miss_rate,gaps_over_60s,label_mismatch,hmm_only_errors,reverse_twin_share
+00000007,0.8633677991137371,0.9076809453471196,-0.04431314623338256,100% of the 77 points the HMM gets wrong (classifier right) are the reverse-direction twin arc: U-turns are not penalised,0.0,0,0.0,77,1.0

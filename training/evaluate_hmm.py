@@ -36,6 +36,9 @@ def classifier_only(trip, candidates):
 
 def likely_cause(facts):
     """One-line cause from measured trip facts (checked in order of how much they limit any decoder)."""
+    if facts["hmm_only_errors"] and facts["reverse_twin_share"] > 0.5:
+        return (f"{facts['reverse_twin_share']:.0%} of the {facts['hmm_only_errors']} points the HMM gets wrong (classifier right) "
+                f"are the reverse-direction twin arc: U-turns are not penalised")
     if facts["miss_rate"] > 0.02:
         return f"true arc not among candidates for {facts['miss_rate']:.1%} of points"
     if facts["gaps_over_60s"] > 0:
@@ -78,6 +81,12 @@ def main():
             "label_mismatch": float((labels["true_arc_id"] != labels["nearest_route_arc"]).mean()),
             "clf_top1": rows[-2]["top1_acc"],
         }
+        clf_arcs, hmm_arcs, truth = classifier_only(trip, candidates), viterbi(trip, candidates, config), labels["true_arc_id"].to_numpy()
+        hmm_only = np.flatnonzero((hmm_arcs != truth) & (clf_arcs == truth) & (hmm_arcs >= 0))
+        arcs = trip["arcs"]
+        facts[trip["trip_id"]]["hmm_only_errors"] = len(hmm_only)
+        facts[trip["trip_id"]]["reverse_twin_share"] = float(np.mean([(arcs[hmm_arcs[i]] == arcs[truth[i]][::-1]).all()
+                                                                      for i in hmm_only])) if len(hmm_only) else 0.0
         cache[trip["trip_id"]] = (trip, outputs)
         print(f"{trip['trip_id']}: classifier top1={rows[-2]['top1_acc']:.4f}  hmm top1={rows[-1]['top1_acc']:.4f}", flush=True)
 
@@ -90,7 +99,7 @@ def main():
     wide["hmm_gain"] = wide["classifier_hmm"] - wide["classifier_only"]
     failures = wide[wide["hmm_gain"] <= 0].reset_index()
     failures["likely_cause"] = [likely_cause(facts[t]) for t in failures["trip_id"]]
-    failures = failures.assign(**{k: [facts[t][k] for t in failures["trip_id"]] for k in ("miss_rate", "gaps_over_60s", "label_mismatch")})
+    failures = failures.assign(**{k: [facts[t][k] for t in failures["trip_id"]] for k in ("miss_rate", "gaps_over_60s", "label_mismatch", "hmm_only_errors", "reverse_twin_share")})
     failures.to_csv(RESULTS / "hmm_failures.csv", index=False)
 
     helps, hurts = wide["hmm_gain"].idxmax(), wide["hmm_gain"].idxmin()

@@ -1,0 +1,50 @@
+Prepared train/00000001: 1315 observations, 31655 candidates
+Prepared train/00000002: 7243 observations, 160130 candidates
+Prepared train/00000003: 821 observations, 42688 candidates
+Prepared train/00000004: 1064 observations, 11884 candidates
+Prepared train/00000005: 1045 observations, 4132 candidates
+Prepared train/00000006: 1450 observations, 27801 candidates
+Prepared train/00000008: 3093 observations, 73126 candidates
+Prepared train/00000010: 2711 observations, 93439 candidates
+Prepared train/00000011: 2828 observations, 28436 candidates
+Prepared train/00000012: 1608 observations, 9292 candidates
+Prepared train/00000013: 2580 observations, 46298 candidates
+Prepared train/00000014: 448 observations, 15639 candidates
+Prepared train/00000016: 1305 observations, 43496 candidates
+Prepared train/00000018: 379 observations, 12592 candidates
+Prepared train/00000019: 2354 observations, 50033 candidates
+Prepared train/00000020: 2353 observations, 12697 candidates
+Prepared train/00000021: 15783 observations, 64040 candidates
+Prepared train/00000022: 474 observations, 18075 candidates
+Prepared train/00000024: 801 observations, 10911 candidates
+Prepared train/00000025: 1179 observations, 22754 candidates
+Evaluated sigma=15 beta=20 gap=5: top1=0.8950
+Evaluated sigma=15 beta=20 gap=30: top1=0.8986
+Evaluated sigma=15 beta=20 gap=60: top1=0.8986
+Evaluated sigma=15 beta=50 gap=5: top1=0.8840
+Evaluated sigma=15 beta=50 gap=30: top1=0.8856
+Evaluated sigma=15 beta=50 gap=60: top1=0.8856
+Evaluated sigma=15 beta=100 gap=5: top1=0.8690
+Evaluated sigma=15 beta=100 gap=30: top1=0.8706
+Evaluated sigma=15 beta=100 gap=60: top1=0.8706
+Evaluated sigma=25 beta=20 gap=5: top1=0.8951
+Evaluated sigma=25 beta=20 gap=30: top1=0.8986
+Evaluated sigma=25 beta=20 gap=60: top1=0.8986
+Evaluated sigma=25 beta=50 gap=5: top1=0.8848
+Evaluated sigma=25 beta=50 gap=30: top1=0.8865
+Evaluated sigma=25 beta=50 gap=60: top1=0.8865
+Evaluated sigma=25 beta=100 gap=5: top1=0.8692
+Evaluated sigma=25 beta=100 gap=30: top1=0.8708
+Evaluated sigma=25 beta=100 gap=60: top1=0.8708
+Evaluated sigma=40 beta=20 gap=5: top1=0.8951
+Evaluated sigma=40 beta=20 gap=30: top1=0.8987
+Evaluated sigma=40 beta=20 gap=60: top1=0.8987
+Evaluated sigma=40 beta=50 gap=5: top1=0.8848
+Evaluated sigma=40 beta=50 gap=30: top1=0.8865
+Evaluated sigma=40 beta=50 gap=60: top1=0.8865
+Evaluated sigma=40 beta=100 gap=5: top1=0.8692
+Evaluated sigma=40 beta=100 gap=30: top1=0.8708
+Evaluated sigma=40 beta=100 gap=60: top1=0.8708
+
+Selected HMM parameters: {"emission_sigma_m": 40.0, "transition_beta_m": 20.0, "gap_threshold_s": 30.0, "model_weight": 0.75, "max_search_m": 3000.0, "tuned_on": "train (first 20 trips)", "n_trips": 20}
+Saved grid results to results\hmm_tuning.csv

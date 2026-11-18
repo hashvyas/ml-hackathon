@@ -1,0 +1,9 @@
+{
+  "emission_sigma_m": 40.0,
+  "transition_beta_m": 20.0,
+  "gap_threshold_s": 30.0,
+  "model_weight": 0.75,
+  "max_search_m": 3000.0,
+  "tuned_on": "train (first 20 trips)",
+  "n_trips": 20
+}
