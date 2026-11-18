@@ -2,9 +2,33 @@
 
 PathSnap maps noisy GPS observations to a directed road network. The prediction service finds nearby road-segment candidates, scores them with the exported classifier (or an explicit distance-only baseline), decodes a connected sequence with a log-space HMM/Viterbi pass, and reconstructs a route. The browser UI connects to the API over a LAN.
 
+Team: V Vyas, V Kushal, Vaishnavi B (PES UE24CS352A hackathon). Report: [`report/report.pdf`](report/report.pdf).
+
+## Repository structure
+
+| Component | Where |
+|---|---|
+| Data processing (read, inspect, clean) | `src/data_io.py` (load and clean a trip), `src/geo.py` (per-trip UTM projection), `notebooks/01_eda.ipynb` (EDA), `training/preprocess_dataset.py` (build candidate tables) |
+| Labels | `src/labels.py` (point labels derived from `.route`) |
+| Feature engineering | `src/features.py` (candidates within R m and their features; `python -m src.features` runs the R sweep) |
+| Model training | `training/train_models.py` (five models, GroupKFold by trip), `training/train_scores.py` (train-set scores) |
+| Model evaluation | `training/train_models.py` (metrics, comparison plots, confusion matrices) -> `results/model_comparison.*`, `results/confusion_*.png` |
+| Hyperparameter optimisation | `training/bayes_opt.py` (Optuna TPE), config and results in `results/optuna_*`, `results/tuned_vs_untuned.*` |
+| HMM and Viterbi | `src/hmm.py` (Viterbi, route reconstruction), `training/tune_hmm.py`, `training/evaluate_hmm.py` -> `results/hmm_*.csv` |
+| End-to-end pipeline | `src/pipeline.py` |
+| API | `api/main.py` (FastAPI endpoints, model loaded once at startup) |
+| UI | `ui/index.html`, `ui/app.js`, `ui/style.css` (Leaflet) |
+| Model weights and configuration | `models/final_model.joblib`, `models/feature_cols.json`, `models/hmm_params.json`, `models/README_model.txt` |
+| Visualisations | `src/maps.py` (Folium maps -> `results/maps/`), `report/make_figures.py`, `report/screenshot_maps.py` |
+| Tests | `tests/test_hmm.py` (unit tests), `tests/api_smoke.py` (checks a running API) |
+| Supporting results | `results/` (CSV results, logs, configs, plots), `results/eda/`, `results/round1_preprocessing_summary.md` |
+| Report | `report/report.md`, `report/report.pdf`, `report/build_pdf.py` |
+| Raw data (read-only) | `data/train/` (80 trips), `data/student_test/` (10 trips) |
+| Hackathon documents | `docs/` |
+
 ## Requirements
 
-- Python 3.10 through 3.13
+- Python 3.11 through 3.13 (results produced with 3.12; `requirements.txt` pins the versions used)
 - The committed trip files in `data/train/` and `data/student_test/`
 - Internet access for the UI's Leaflet, OpenStreetMap tiles, and web fonts
 
@@ -51,6 +75,18 @@ python training/evaluate_hmm.py
 ```
 
 This writes `results/hmm_comparison.csv`, `results/hmm_failures.csv` and two maps in `results/maps/` (one trip where the HMM helps, one where it does not).
+
+## EDA and report
+
+```powershell
+jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb   # EDA tables and plots -> results/eda/
+python -m src.maps                     # Folium maps for one train and one student_test trip -> results/maps/
+python training/train_scores.py        # train-set scores of the five models -> results/model_train_scores.csv
+python report/make_figures.py          # static figures -> report/figures/
+python -m playwright install chromium  # once, for the map screenshots
+python report/screenshot_maps.py       # Folium map screenshots -> report/figures/folium_*.png
+python report/build_pdf.py             # report/report.md -> report/report.pdf
+```
 
 ## Run the API
 
