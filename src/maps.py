@@ -16,7 +16,7 @@ def _arc_segments(trip, arc_ids):
     return [[[nodes[a, 1], nodes[a, 0]], [nodes[b, 1], nodes[b, 0]]] for a, b in arcs[list(arc_ids)]]
 
 
-def make_map(trip, predicted_arcs=None, out_path=None):
+def make_map(trip, predicted_arcs=None, out_path=None, classifier_arcs=None, predicted_name="Predicted route"):
     track, nodes, arcs = trip["track"], trip["nodes"], trip["arcs"]
     lon, lat = track["lon"].to_numpy(), track["lat"].to_numpy()
 
@@ -44,9 +44,15 @@ def make_map(trip, predicted_arcs=None, out_path=None):
         folium.PolyLine(_arc_segments(trip, trip["route"]), color="green", weight=5, opacity=0.7).add_to(ref)
         ref.add_to(m)
 
+    if classifier_arcs is not None:
+        clf = folium.FeatureGroup(name="Classifier-only route")
+        folium.PolyLine(_arc_segments(trip, [a for a in classifier_arcs if a >= 0]),
+                        color="orange", weight=3, opacity=0.9).add_to(clf)
+        clf.add_to(m)
+
     if predicted_arcs is not None:
         pred_ids = [a for a in predicted_arcs if a >= 0]  # -1 means "no candidate"
-        pred = folium.FeatureGroup(name="Predicted route")
+        pred = folium.FeatureGroup(name=predicted_name)
         folium.PolyLine(_arc_segments(trip, pred_ids), color="red", weight=3, opacity=0.9).add_to(pred)
         pred.add_to(m)
 
@@ -64,7 +70,8 @@ def make_map(trip, predicted_arcs=None, out_path=None):
               "<span style='color:blue'>&#9679;</span> GPS points<br>"
               "<span style='color:#888'>&#9473;</span> Road network<br>"
               "<span style='color:green'>&#9473;</span> Reference route<br>"
-              "<span style='color:red'>&#9473;</span> Predicted route</div>")
+              + ("<span style='color:orange'>&#9473;</span> Classifier-only route<br>" if classifier_arcs is not None else "")
+              + f"<span style='color:red'>&#9473;</span> {predicted_name}</div>")
     m.get_root().html.add_child(folium.Element(legend))
 
     if out_path is not None:
