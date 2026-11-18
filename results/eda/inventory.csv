@@ -1,0 +1,3 @@
+partition,trips,files,total_size_mb,points_total,points_min,points_median,points_max
+student_test,10,40,4.166213035583496,19160,262,1420.0,3958
+train,80,320,85.58030319213867,208417,361,1529.0,19313
