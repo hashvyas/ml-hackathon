@@ -34,10 +34,10 @@ ml-hackathon/   (repo root)
     geo.py          per-trip UTM projection, point-to-segment distance            [A]
     labels.py       per-GPS-point true arc from .route                           [ME]
     features.py     candidates + features per GPS point                          [ME]
-    hmm.py          viterbi(cands_with_prob, trip, params) -> arc per obs        [A]
+    hmm.py          viterbi(cands_with_prob, trip, params) -> arc per obs        [B]
     pipeline.py     predict_trip(dir) -> obs_arcs, route geometry, metrics       [B]
     maps.py         folium map (GPS, network, reference, predicted, layers)     [A]
-  notebooks/ 01_eda.ipynb [A]   02_models.ipynb [ME]   03_hmm_eval.ipynb [A]
+  notebooks/ 01_eda.ipynb [A]   02_models.ipynb [ME]   03_hmm_eval.ipynb [B]
   training/  train_models.py, cv.py, bayes_opt.py (Optuna)                       [ME]
   models/    final_model.joblib, feature_cols.json, hmm_params.json
   results/   csv logs, plots, optuna trials, folium html
@@ -51,7 +51,7 @@ ml-hackathon/   (repo root)
 1. `load_trip(path)` returns `track` as a DataFrame[lon, lat, t], `nodes` as an (N,2) array, `arcs` as an (M,2) array, and `route` as a list or None. A writes this in the **first 30 min** and pushes it.
 2. The candidate table (from ME) has one row per (obs_idx, arc_id) with `dist_m` and the feature columns, plus `label` (0/1) when a route exists. Label = the arc this point was on.
 3. Model artifact (from ME): `models/final_model.joblib` plus `feature_cols.json`; `predict_proba` gives P(candidate is true arc).
-4. HMM input (A) is the candidate table plus a `prob` column. Output is one arc_id per obs, or -1 if the point has no candidate. Until the model is ready, A can test with `prob = exp(-dist²/2σ²)`.
+4. HMM input (B) is the candidate table plus a `prob` column. Output is one arc_id per obs, or -1 if the point has no candidate. Until the model is ready, B can test with `prob = exp(-dist²/2σ²)`.
 5. API response (B): `{trip_id, gps:[[lat,lon]], predicted_route:[[lat,lon]...], per_obs_arcs, metrics:{top1_acc, macro_f1, route_precision, route_recall, continuity, n_obs, time_ms}}`. Ground truth only ever goes into `metrics`.
 
 ---
@@ -62,25 +62,26 @@ ml-hackathon/   (repo root)
 3. **5+ models** from different families: LogisticRegression, GaussianNB, KNN, RandomForest/ExtraTrees, HistGB/LightGBM/XGBoost, MLP (loss curve allowed), and optionally an SVM on a subsample. **GroupKFold by trip** on the 80 train trips.
 4. **Metrics per model**: CV macro F1, student_test macro F1, log loss, observation-level Top-1 accuracy (argmax per point), training/inference time. Save confusion matrices. Write one CSV row per model to `results/model_comparison.csv`, with seeds fixed and configs logged.
 5. **Bayesian opt** (Optuna TPE, GroupKFold, objective = CV macro F1 or Top-1) on the best model: about 50 trials, `optuna_trials.csv`, then refit and compare tuned vs untuned on the same metrics.
-6. Export `final_model.joblib` and `feature_cols.json`, and give A the probabilities for student_test.
+6. Export `final_model.joblib` and `feature_cols.json`, and give B the probabilities for student_test.
 7. Write report §3 (per-model questions A–C, comparison table, plots) and §4.
 
-## Teammate A: data, HMM/Viterbi, maps
+## Teammate A: data, EDA, maps
 1. **H0 (first 30 min):** `data_io.py` and `geo.py`, pushed so ME and B can start. `load_trip` also **cleans** the track (pipeline step 2): sort by timestamp, drop duplicate timestamps and NaN/out-of-range coordinates, and flag time gaps. Every cleaning rule is logged so EDA can report it.
 2. **EDA** (`01_eda.ipynb`, run on train and student_test, labelled by partition): trip inventory, point counts, file sizes, dtypes, missing/invalid values, timestamp gaps (the share of 1 s steps, big gaps), geographic extents, network size, connectivity (networkx: components, isolated nodes), route structure (is it a connected arc chain?), anomalies.
 3. **`maps.py`**: one folium map function with layers for GPS points, the nearby road network, the reference route and the predicted route, plus a legend and LayerControl. EDA uses it now; ME and B reuse it later.
-4. **HMM/Viterbi** (`hmm.py`): hidden states = candidate arcs per point. Emission = classifier prob (blended with Gaussian distance). Transition = exp(-|route distance − GPS distance|/β), with route distance from Dijkstra on the arc graph (bounded search). Unreachable pairs get a tiny probability. A point with no candidates is skipped and bridged. A large time gap means the chain is split or β is relaxed. Use log-space Viterbi.
-5. **Route reconstruction** (`hmm.reconstruct_route`, pipeline step 6): take the per-point arcs, merge consecutive repeats, and fill each break between non-adjacent arcs with the shortest path, giving one ordered arc sequence. Convert it to lat/lon for the map. Route precision/recall are computed on this sequence against `.route`.
-6. **Decoder tuning** (σ, β, gap threshold) on train/student_test only. Compare **classifier-only vs classifier+HMM**: Top-1, route precision/recall, continuity (the share of consecutive predicted arcs that are connected or equal). Include failure cases.
-7. Write report §2.2 (EDA), §5 (HMM) and §6 (folium screenshots).
+4. Write report §2.2 (EDA) and §6 (folium screenshots).
 
-## Teammate B: API, UI, deployment, repo, report assembly
+## Teammate B: HMM/Viterbi, route reconstruction, API, UI, deployment, report assembly
 1. **H0:** create the GitHub repo and the layout above, `.gitignore`, `requirements.txt`, and invite everyone.
-2. **FastAPI** (`api/main.py`): `GET /trips` returns the trip IDs from `EVAL_DIR` (and student_test for dev). `POST /predict {trip_id}` runs `pipeline.predict_trip`, computes metrics against `.route` server-side, and logs every request to the console. The evaluator watches this log. Enable CORS and run with `uvicorn --host 0.0.0.0`. Load the model once at startup.
-3. **`pipeline.py`** chains `load_trip → features → model.predict_proba → hmm.viterbi → metrics`, built from ME's and A's functions. B can start with a dummy nearest-arc predictor so the API and UI work before the model exists.
-4. **UI** (`ui/`, plain HTML + JS + Leaflet): an input for the API base URL (Laptop 1's LAN IP), the trip list from `/trips`, and a button that POSTs. The map shows raw GPS (blue dots) and the predicted route (green line), with a metrics panel (Top-1 acc, macro F1, route precision/recall, continuity, inference time) and the list of predicted segments. **No ground truth in the UI: never draw the reference route.** Only the server computes metrics from it. Reference-route maps belong in the report's folium maps only. Serve it with `python -m http.server` on Laptop 2.
-5. **Two-laptop test:** same Wi-Fi/hotspot, allow port 8000 through Windows Firewall, run all 10 student_test trips end to end, and time each one (the first request may be slow because of Dijkstra). Hotspot fallback if the venue Wi-Fi blocks clients from seeing each other.
-6. Write the README (install, data placement and the "raw data read-only, generated files go to data/processed/" rule, training commands, running API/UI, two-laptop steps) and report §7 (UI screenshots, API log screenshots). **Assemble the full PDF.**
+2. **HMM/Viterbi** (`hmm.py`): hidden states = candidate arcs per point. Emission = classifier prob (blended with Gaussian distance). Transition = exp(-|route distance − GPS distance|/β), with route distance from Dijkstra on the arc graph (bounded search). Unreachable pairs get a tiny probability. A point with no candidates is skipped and bridged. A large time gap means the chain is split or β is relaxed. Use log-space Viterbi.
+3. **Route reconstruction** (`hmm.reconstruct_route`, pipeline step 6): take the per-point arcs, merge consecutive repeats, and fill each break between non-adjacent arcs with the shortest path, giving one ordered arc sequence. Convert it to lat/lon for the map. Route precision/recall are computed on this sequence against `.route`.
+4. **Decoder tuning** (σ, β, gap threshold) on train/student_test only. Compare **classifier-only vs classifier+HMM**: Top-1, route precision/recall, continuity (the share of consecutive predicted arcs that are connected or equal). Include failure cases.
+5. Write report §5 (HMM and Viterbi), using A's `maps.py` for the classifier-only vs HMM maps.
+6. **FastAPI** (`api/main.py`): `GET /trips` returns the trip IDs from `EVAL_DIR` (and student_test for dev). `POST /predict {trip_id}` runs `pipeline.predict_trip`, computes metrics against `.route` server-side, and logs every request to the console. The evaluator watches this log. Enable CORS and run with `uvicorn --host 0.0.0.0`. Load the model once at startup.
+7. **`pipeline.py`** chains `load_trip → features → model.predict_proba → hmm.viterbi → metrics`, built from ME's, A's and B's own functions. B can start with a dummy nearest-arc predictor so the API and UI work before the model exists.
+8. **UI** (`ui/`, plain HTML + JS + Leaflet): an input for the API base URL (Laptop 1's LAN IP), the trip list from `/trips`, and a button that POSTs. The map shows raw GPS (blue dots) and the predicted route (green line), with a metrics panel (Top-1 acc, macro F1, route precision/recall, continuity, inference time) and the list of predicted segments. **No ground truth in the UI: never draw the reference route.** Only the server computes metrics from it. Reference-route maps belong in the report's folium maps only. Serve it with `python -m http.server` on Laptop 2.
+9. **Two-laptop test:** same Wi-Fi/hotspot, allow port 8000 through Windows Firewall, run all 10 student_test trips end to end, and time each one (the first request may be slow because of Dijkstra). Hotspot fallback if the venue Wi-Fi blocks clients from seeing each other.
+10. Write the README (install, data placement and the "raw data read-only, generated files go to data/processed/" rule, training commands, running API/UI, two-laptop steps) and report §7 (UI screenshots, API log screenshots). **Assemble the full PDF.**
 
 ---
 
@@ -89,10 +90,10 @@ ml-hackathon/   (repo root)
 |---|---|---|---|
 | H0–0.5 | read data, plan features | data_io + geo, push | repo, layout, requirements |
 | H0.5–2 | labels + candidates, miss rate | EDA notebook + folium | FastAPI skeleton + UI skeleton with dummy predictor |
-| H2–4 | features + 5 models + CV | network connectivity, HMM v1 (distance emission) | API ↔ UI over LAN working |
+| H2–4 | features + 5 models + CV | network connectivity, folium maps for the report | HMM v1 (distance emission), API ↔ UI over LAN |
 | **Phase-1 check** | model comparison table | EDA + maps | live demo with dummy |
-| H4–6 | Bayesian opt, export model | HMM with real probs, tune, comparison | wire real pipeline, test all 10 trips |
-| H6–7.5 | report §3–4 | report §2.2, §5, §6 | README, screenshots, §7, assemble PDF |
+| H4–6 | Bayesian opt, export model | data-quality write-up, help B test trips | HMM with real probs, tune, comparison, wire pipeline, test all 10 trips |
+| H6–7.5 | report §3–4 | report §2.2, §6 | report §5, README, screenshots, §7, assemble PDF |
 | H7.5–8 | **everyone:** run the full demo once, make the repo public, each member rehearses explaining all parts | | |
 
 ## Risks
