@@ -159,26 +159,3 @@ The trip list is discovered from the API on every refresh. Teammate code changes
 3. Quick check from Laptop 2 first: open `http://192.168.1.23:8000/health` in the browser.
 
 **Hotspot fallback:** if the venue Wi-Fi blocks laptop-to-laptop traffic (health check times out), turn on the phone or Laptop 1 mobile hotspot, join both laptops to it, rerun `ipconfig` on Laptop 1 and use the new address.
-
-## Team workflow
-
-Keep personal work on `kushal` and push it for team review:
-
-```powershell
-git switch kushal
-git pull --ff-only origin kushal
-git add <your-files>
-git commit -m "Describe your change"
-git push origin kushal
-```
-
-The team lead can merge the branch into `main`. To include teammates' merged changes in your checkout:
-
-```powershell
-git switch main
-git pull --ff-only origin main
-git switch kushal
-git merge --ff-only main
-```
-
-Never write generated labels, candidates, predictions, or other outputs into the raw `data/train/` or `data/student_test/` folders.
