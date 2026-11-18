@@ -138,7 +138,9 @@ def _transition_log_probability(
         distances = graph.distances_from(int(previous_to), search_limit)
         middle_distance = distances.get(int(next_from))
         if middle_distance is None:
-            return -20.0
+            # Unreachable within the search bound means the road distance exceeds search_limit,
+            # so penalise it at least as much as the worst reachable pair (a fixed -20 ignored beta).
+            return -(search_limit - gps_distance) / beta_m
         route_distance = (
             (1.0 - previous_offset) * graph.arc_lengths[previous_arc]
             + middle_distance
