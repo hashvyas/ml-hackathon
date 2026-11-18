@@ -9,3 +9,5 @@ data/processed/*
 !data/processed/.gitkeep
 # reserved evaluator trips: never committed
 evaluator_test/
+# report is kept locally, not in the repo
+report/
