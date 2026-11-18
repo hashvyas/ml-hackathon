@@ -1,0 +1,53 @@
+{
+  "model": "HistGradientBoostingClassifier",
+  "sampler": "TPESampler",
+  "seed": 42,
+  "n_trials": 50,
+  "objective": "mean CV macro F1 at threshold 0.5",
+  "cv": "GroupKFold(5) by trip_id, train trips only",
+  "train_subsample_rows": 100000,
+  "features": [
+    "dist_m",
+    "distance_rank",
+    "heading_diff_deg",
+    "speed_mps",
+    "arc_length_m",
+    "from_degree",
+    "to_degree",
+    "candidate_count",
+    "distance_gap_m",
+    "offset_fraction"
+  ],
+  "search_space": {
+    "learning_rate": {
+      "low": 0.01,
+      "high": 0.3,
+      "log": true
+    },
+    "max_iter": {
+      "low": 100,
+      "high": 600,
+      "log": false
+    },
+    "max_leaf_nodes": {
+      "low": 15,
+      "high": 127,
+      "log": false
+    },
+    "min_samples_leaf": {
+      "low": 10,
+      "high": 200,
+      "log": false
+    },
+    "l2_regularization": {
+      "low": 1e-06,
+      "high": 10.0,
+      "log": true
+    },
+    "max_bins": {
+      "low": 64,
+      "high": 255,
+      "log": false
+    }
+  }
+}

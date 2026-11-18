@@ -1,0 +1,12 @@
+[
+  "dist_m",
+  "distance_rank",
+  "heading_diff_deg",
+  "speed_mps",
+  "arc_length_m",
+  "from_degree",
+  "to_degree",
+  "candidate_count",
+  "distance_gap_m",
+  "offset_fraction"
+]
