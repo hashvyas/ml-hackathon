@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+numpy
+pandas
+scipy
+scikit-learn
+pyproj
+networkx
+folium
+joblib
+optuna
+matplotlib
+seaborn
+tqdm
+lightgbm
+xgboost
