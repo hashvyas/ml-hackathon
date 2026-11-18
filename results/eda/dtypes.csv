@@ -1,0 +1,17 @@
+partition,example_trip,file,column,dtype,example_value
+train,00000001,track,lon,float64,8.595203
+train,00000001,track,lat,float64,49.844053
+train,00000001,track,t,float64,1.0
+train,00000001,nodes,lon,float64,8.581679
+train,00000001,nodes,lat,float64,49.85788
+train,00000001,arcs,from_node,int64,0.0
+train,00000001,arcs,to_node,int64,281.0
+train,00000001,route,arc_id,int64,2641.0
+student_test,00000000,track,lon,float64,54.963519
+student_test,00000000,track,lat,float64,56.251559
+student_test,00000000,track,t,float64,1.0
+student_test,00000000,nodes,lon,float64,54.335879
+student_test,00000000,nodes,lat,float64,56.11728
+student_test,00000000,arcs,from_node,int64,0.0
+student_test,00000000,arcs,to_node,int64,2433.0
+student_test,00000000,route,arc_id,int64,17630.0

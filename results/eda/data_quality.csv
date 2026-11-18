@@ -1,0 +1,10 @@
+issue,evidence,assumption,decision
+Invalid / NaN coordinates,"train 0, student_test 0 rows",Invalid rows carry no position,Dropped in data_io.load_trip
+Duplicate timestamps,"train 0, student_test 0 rows",Same second = same fix,"Keep first, drop rest"
+Unsorted timestamps,0 trips,Order is time order,Sort by t (stable)
+Time gaps > 1.5 s,"train 7273, student_test 264 gaps; 23 trips with a gap > 60 s",Vehicle kept moving during gaps,Flag with is_gap_after; HMM relaxes transitions over gaps
+Different regions (train vs student_test),"train lon -100.42..137.24, student_test lon -93.42..77.27",Degrees are not metres; location must not leak,Per-trip UTM projection; no raw lat/lon features
+Disconnected network pieces,"median weak components: train 20, student_test 11",Small pieces are clipping artefacts at the network border,Keep all arcs as candidates; HMM uses graph distance
+Isolated nodes,"train 0, student_test 0",Nodes without arcs cannot be matched,Ignored (candidates are arcs)
+Route not a perfect chain,"mean chain share train 0.9993, student_test 0.9997","Route is reference information, not verified truth",Derive point labels monotonically; report label mismatch rate
+No GPS-point-to-arc mapping,route arcs per point: train 0.15,Point lies on the nearest of the next few route arcs,src/labels.py monotonic labelling
