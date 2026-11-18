@@ -120,3 +120,48 @@ def candidate_miss_rate(
         candidate_pairs, on=["obs_idx", "arc_id"], how="inner"
     )["obs_idx"].nunique()
     return float(1.0 - covered / len(labelled_pairs))
+
+
+if __name__ == "__main__":
+    # R sweep on TRAIN trips only: candidate miss rate per radius, then choose R.
+    import json
+    from pathlib import Path
+
+    from .data_io import load_trip
+    from .labels import derive_point_labels, label_mismatch_rate
+
+    radii = (30.0, 50.0, 80.0)
+    rows, n_obs, n_invalid, n_dup, mismatches = [], 0, 0, 0, []
+    for trip_dir in sorted(Path("data/train").iterdir()):
+        trip = load_trip(trip_dir)
+        attrs = trip["track"].attrs
+        n_obs += len(trip["track"])
+        n_invalid += attrs["invalid_rows_removed"]
+        n_dup += attrs["duplicate_timestamps_removed"]
+        proj = TripProjection.from_coordinates(trip["track"]["lon"].to_numpy(), trip["track"]["lat"].to_numpy())
+        labels = derive_point_labels(trip["track"], trip["nodes"], trip["arcs"], trip["route"], proj)
+        mismatches.append(label_mismatch_rate(labels) * len(labels))
+        cands = build_candidate_features(trip, radius_m=max(radii), projection=proj, labels=labels)
+        for r in radii:  # a smaller R is just a distance filter on the largest-R candidate set
+            rows.append({"trip_id": trip["trip_id"], "radius_m": r, "n_obs": len(labels),
+                         "miss_rate": candidate_miss_rate(cands[cands["dist_m"] <= r], labels),
+                         "cands_per_obs": (cands["dist_m"] <= r).sum() / len(labels)})
+    df = pd.DataFrame(rows)
+    df["missed"] = df["miss_rate"] * df["n_obs"]
+    summary = df.groupby("radius_m").apply(
+        lambda g: pd.Series({"miss_rate": g["missed"].sum() / g["n_obs"].sum(),
+                             "cands_per_obs": (g["cands_per_obs"] * g["n_obs"]).sum() / g["n_obs"].sum()}),
+        include_groups=False).reset_index()
+    # rule: smallest R whose miss rate is within 0.5 percentage points of the largest R (fewer candidates, same recall)
+    best = summary["miss_rate"].min()
+    chosen = float(summary.loc[summary["miss_rate"] <= best + 0.005, "radius_m"].min())
+    Path("results").mkdir(exist_ok=True)
+    summary.to_csv("results/candidate_miss_rate.csv", index=False)
+    info = {"radius_m": chosen, "rule": "smallest R with miss_rate <= min + 0.005",
+            "train_obs_after_cleaning": n_obs, "invalid_rows_removed": int(n_invalid),
+            "duplicate_timestamps_removed": int(n_dup), "label_mismatch_rate": sum(mismatches) / n_obs}
+    Path("results/preprocessing.json").write_text(json.dumps(info, indent=2))
+    print("PREPROCESSING (train):", f"obs kept={n_obs}, dropped NaN/out-of-range={n_invalid}, dropped duplicate t={n_dup}")
+    print(f"LABEL MISMATCH RATE (monotonic label != nearest route arc): {info['label_mismatch_rate']:.4f}")
+    print("CANDIDATE MISS RATE per R:\n", summary.to_string(index=False))
+    print("CHOSEN R:", chosen, "m")

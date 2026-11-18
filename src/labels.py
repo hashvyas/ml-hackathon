@@ -37,6 +37,7 @@ def derive_point_labels(
 
     route_positions: list[int] = []
     distances: list[float] = []
+    nearest_any: list[int] = []  # unconstrained nearest route arc, used only to measure label mismatch
     current = 0
     for point in np.column_stack((gps_x, gps_y)):
         stop = min(len(route_array), current + lookahead + 1)
@@ -45,6 +46,10 @@ def derive_point_labels(
         candidate_distances, _ = point_to_segments(
             candidate_points, starts[candidate_positions], ends[candidate_positions]
         )
+        all_distances, _ = point_to_segments(
+            np.repeat(point[None, :], len(route_array), axis=0), starts, ends
+        )
+        nearest_any.append(int(route_array[np.argmin(all_distances)]))
         nearest_index = int(np.argmin(candidate_distances))
         selected = int(candidate_positions[nearest_index])
         current = selected
@@ -57,8 +62,14 @@ def derive_point_labels(
             "true_arc_id": route_array[np.asarray(route_positions)],
             "route_pos": route_positions,
             "label_distance_m": distances,
+            "nearest_route_arc": nearest_any,
         }
     )
     labels.attrs["route_length"] = len(route_array)
     labels.attrs["lookahead"] = lookahead
     return labels
+
+
+def label_mismatch_rate(labels: pd.DataFrame) -> float:
+    """Share of points whose monotonic label differs from the plain nearest route arc."""
+    return float((labels["true_arc_id"] != labels["nearest_route_arc"]).mean())
