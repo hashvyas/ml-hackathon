@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.venv*/
 venv/
 .ipynb_checkpoints/
 # generated data (raw data in data/train, data/student_test is committed and read-only)
