@@ -19,7 +19,7 @@ Source: `results/preprocessing.json` (train) and `results/eda/missing_invalid.cs
 
 - Method: walk `.route` in order. Each GPS point gets the nearest route arc among the current position and the next 8 (`lookahead=8`). The position never moves backwards.
 - **Label mismatch rate (train): 0.0856** (8.56%). This is the share of points whose monotonic label differs from the unconstrained nearest route arc (`labels.label_mismatch_rate`).
-- Label mismatch rate for student_test: **not found**. I looked in `results/preprocessing.json`, which covers train only, and `results/preprocess_log.txt`, which doesn't log it.
+- **Label mismatch rate (student_test): 0.0903** (19,160 points). It uses the same `derive_point_labels` and `label_mismatch_rate` functions as train, is reported only, and was not used for any choice.
 
 ## 3. Candidate miss rate per radius (train, `src/features.py` sweep)
 
