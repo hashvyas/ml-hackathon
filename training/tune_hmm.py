@@ -1,4 +1,4 @@
-"""Tune HMM sigma and beta on labelled train or student_test trips."""
+"""Tune HMM sigma, beta and gap threshold on labelled trips (train by default)."""
 
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ def _values(raw: str) -> list[float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--partition", choices=("train", "student_test"), default="student_test")
+    parser.add_argument("--partition", choices=("train", "student_test"), default="train")
     parser.add_argument("--data-root", type=Path, default=Path("data"))
     parser.add_argument("--sigma-m", type=_values, default=_values("15,25,40"))
     parser.add_argument("--beta-m", type=_values, default=_values("20,50,100"))
-    parser.add_argument("--gap-threshold-s", type=float, default=5.0)
+    parser.add_argument("--gap-threshold-s", type=_values, default=_values("5,30,60"))
     parser.add_argument("--max-trips", type=int, default=0, help="0 processes the whole partition")
     parser.add_argument("--output", type=Path, default=Path("results/hmm_tuning.csv"))
     parser.add_argument("--params-output", type=Path, default=Path("models/hmm_params.json"))
@@ -62,7 +62,7 @@ def main() -> None:
         base_config = HMMConfig(
             emission_sigma_m=args.sigma_m[0],
             transition_beta_m=args.beta_m[0],
-            gap_threshold_s=args.gap_threshold_s,
+            gap_threshold_s=args.gap_threshold_s[0],
         )
         candidates = prepare_trip(
             trip,
@@ -79,12 +79,12 @@ def main() -> None:
         )
 
     rows = []
-    for sigma in args.sigma_m:
-        for beta in args.beta_m:
+    grid = [(s, b, g) for s in args.sigma_m for b in args.beta_m for g in args.gap_threshold_s]
+    for sigma, beta, gap in grid:
             config = HMMConfig(
                 emission_sigma_m=sigma,
                 transition_beta_m=beta,
-                gap_threshold_s=args.gap_threshold_s,
+                gap_threshold_s=gap,
             )
             metrics = []
             for trip, original_candidates in prepared:
@@ -98,6 +98,7 @@ def main() -> None:
                 {
                     "sigma_m": sigma,
                     "beta_m": beta,
+                    "gap_threshold_s": gap,
                     "top1_acc": float(np.mean([m["top1_acc"] for m in metrics])),
                     "macro_f1": float(np.mean([m["macro_f1"] for m in metrics])),
                     "route_precision": float(np.mean([m["route_precision"] for m in metrics])),
@@ -106,7 +107,7 @@ def main() -> None:
                     "n_trips": len(metrics),
                 }
             )
-            print(f"Evaluated sigma={sigma:g} beta={beta:g}", flush=True)
+            print(f"Evaluated sigma={sigma:g} beta={beta:g} gap={gap:g}: top1={rows[-1]['top1_acc']:.4f}", flush=True)
 
     results = pd.DataFrame(rows).sort_values(
         ["top1_acc", "macro_f1"], ascending=False, kind="stable"
@@ -117,10 +118,10 @@ def main() -> None:
     params = {
         "emission_sigma_m": float(best["sigma_m"]),
         "transition_beta_m": float(best["beta_m"]),
-        "gap_threshold_s": args.gap_threshold_s,
+        "gap_threshold_s": float(best["gap_threshold_s"]),
         "model_weight": 0.75,
         "max_search_m": 3000.0,
-        "tuned_on": args.partition,
+        "tuned_on": f"{args.partition} (first {len(trip_dirs)} trips)",
         "n_trips": int(best["n_trips"]),
     }
     args.params_output.parent.mkdir(parents=True, exist_ok=True)
