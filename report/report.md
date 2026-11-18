@@ -1,6 +1,11 @@
-# PathSnap: map-matching noisy GPS tracks to a road network
+# PathSnap: Map-Matching Noisy GPS Tracks to a Road Network
 
-Team report, PES UE24CS352A hackathon. Every number and figure below comes from a file in the repository; the source of each is listed in the last section. Partitions: **train** (80 trips) is used for fitting and cross-validation, **student_test** (10 trips) for development comparison only. The 10 evaluator trips were not used for anything in this report.
+<!-- plain -->
+| V Vyas | V Kushal | Vaishnavi B |
+|---|---|---|
+| PES2UG24CS569 | PES2UG24CS572 | PES2UG24CS572 |
+
+PES UE24CS352A Machine Learning hackathon report. We use two partitions: train (80 trips) for fitting and cross-validation, and student_test (10 trips) for development comparisons. The 10 evaluator trips were kept aside and not used for any result or choice in this report. All tables and figures are produced by code in the repository; the last section lists the file behind each one.
 
 # 2.2 Dataset understanding and exploratory data analysis
 
@@ -57,7 +62,9 @@ There are no missing or invalid values in either partition. Sampling is nominall
 
 The interactive Folium maps `results/maps/train_00000001.html` and `results/maps/student_test_00000007.html` (code: `src/maps.py`) show GPS points, the nearby road network, the reference route and start/end markers with a legend and layer control.
 
-**[Placeholder: screenshot of results/maps/student_test_00000007.html, to be added by hand]**
+![Folium map, train 00000001: GPS points (blue), road network (grey), reference route (green), start and end markers, legend and layer control](figures/folium_train_00000001.png)
+
+![Folium map, student_test 00000007](figures/folium_student_test_00000007.png)
 
 ## 2.2.3 Features extracted and why
 
@@ -85,15 +92,15 @@ All models are trained on the 80 train trips with 5-fold GroupKFold by trip, so 
 
 ## 3.1 Overall model comparison
 
-| Model | Family | Key configuration | CV macro F1 (mean +/- std) | student_test Top-1 | Route continuity | student_test macro F1 | student_test log loss | Inference time (s, 389,287 rows) |
+| Model | Family | Key configuration | CV macro F1 (mean +/- std) | Test Top-1 | Continuity | Test macro F1 | Test log loss | Inference (s) |
 |---|---|---|---|---|---|---|---|---|
-| LogisticRegression | Linear | StandardScaler, L2, C=1, max_iter=1000 | 0.8308 +/- 0.0286 | 0.7977 | N/A (note) | 0.8480 | 0.0773 | 0.07 |
-| GaussianNB | Probabilistic | default (var_smoothing 1e-9) | 0.7682 +/- 0.0158 | 0.7341 | N/A (note) | 0.7701 | 0.3137 | 0.27 |
-| KNN | Instance-based | StandardScaler, k=25, uniform weights | 0.8229 +/- 0.0224 | 0.7461 | N/A (note) | 0.8336 | 0.1387 | 84.92 |
-| RandomForest | Bagging ensemble | 200 trees, min_samples_leaf=5 | 0.8749 +/- 0.0296 | 0.8044 | N/A (note) | 0.8924 | 0.0730 | 0.68 |
-| HistGradientBoosting | Boosting | defaults (lr 0.1, max_iter 100, 31 leaves, early stopping) | 0.8767 +/- 0.0289 | 0.8029 | N/A (note) | 0.8901 | 0.0544 | 0.23 |
+| LogisticRegression | Linear | StandardScaler, L2, C=1, max_iter=1000 | 0.8308 +/- 0.0286 | 0.7977 | N/A: a single classifier gives no route; see section 5 | 0.8480 | 0.0773 | 0.07 |
+| GaussianNB | Probabilistic | default (var_smoothing 1e-9) | 0.7682 +/- 0.0158 | 0.7341 | N/A: a single classifier gives no route; see section 5 | 0.7701 | 0.3137 | 0.27 |
+| KNN | Instance-based | StandardScaler, k=25, uniform weights | 0.8229 +/- 0.0224 | 0.7461 | N/A: a single classifier gives no route; see section 5 | 0.8336 | 0.1387 | 84.92 |
+| RandomForest | Bagging ensemble | 200 trees, min_samples_leaf=5 | 0.8749 +/- 0.0296 | 0.8044 | N/A: a single classifier gives no route; see section 5 | 0.8924 | 0.0730 | 0.68 |
+| HistGradientBoosting | Boosting | defaults (lr 0.1, max_iter 100, 31 leaves, early stopping) | 0.8767 +/- 0.0289 | 0.8029 | N/A: a single classifier gives no route; see section 5 | 0.8901 | 0.0544 | 0.23 |
 
-Note: route continuity is a property of a decoded route, not of a candidate classifier, so it is N/A here; it is measured for the final model with and without the HMM in section 5 (classifier-only 0.8998, with HMM 0.9738). Training time (s) on the 100,000-row subsample: LogisticRegression 0.22, GaussianNB 0.06, KNN 0.19, RandomForest 4.25, HistGradientBoosting 0.29. Train-set scores on the same subsample (for over/underfitting, `results/model_train_scores.csv`):
+Note: "Test" means student_test; inference time is for all 389,287 student_test candidate rows. Route continuity is measured for the final model with and without the HMM in section 5 (classifier-only 0.8998, with HMM 0.9738). Training time (s) on the 100,000-row subsample: LogisticRegression 0.22, GaussianNB 0.06, KNN 0.19, RandomForest 4.25, HistGradientBoosting 0.29. Train-set scores on the same subsample (for over/underfitting, `results/model_train_scores.csv`):
 
 | Model | train macro F1 | CV macro F1 | gap | train log loss | CV log loss |
 |---|---|---|---|---|---|
@@ -237,9 +244,13 @@ Map code: `src/maps.py`, function `make_map(trip, predicted_arcs=None, out_path=
 | results/maps/student_test_00000077_hmm_helps.html | student_test | GPS, network, reference, classifier-only, classifier + HMM |
 | results/maps/student_test_00000007_hmm_not_helping.html | student_test | GPS, network, reference, classifier-only, classifier + HMM |
 
-The static figures in sections 2.2 and 5 are drawn from the same layers (`report/make_figures.py`) because no headless browser was available to screenshot the HTML maps.
+The figures in sections 2.2 and 5 are static prints of the same layers, drawn by `report/make_figures.py`; the HTML files are the interactive versions.
 
-**[Placeholder: screenshot of results/maps/student_test_00000077_hmm_helps.html with all layers on, to be added by hand]**
+![Folium map, student_test 00000077 (HMM helps most), all layers on](figures/folium_student_test_00000077_hmm_helps.png)
+
+![Same map with the GPS layer switched off: classifier-only route (orange) leaves the road at many points, classifier + HMM route (red) follows the reference (green)](figures/folium_student_test_00000077_hmm_helps_routes.png)
+
+![Folium map, student_test 00000007 (HMM does not help), GPS layer off](figures/folium_student_test_00000007_hmm_not_helping_routes.png)
 
 # 7. API, UI and deployment
 
@@ -249,7 +260,7 @@ The static figures in sections 2.2 and 5 are drawn from the same layers (`report
 
 **UI** (`ui/`, plain HTML, JavaScript and Leaflet, served with `python -m http.server 5500 --directory ui`). It takes the API base URL, loads the trip list from `/trips`, posts the chosen trip and draws the GPS points (blue) and the predicted route (green), with a metrics panel and the list of predicted arc ids. It uses only `gps`, `predicted_route`, `per_obs_arcs`, `metrics` and `predictor` from the response, so it never receives or draws the reference route.
 
-**Timing** (API and client on the same laptop, `results/api_timing.csv`; request 1 is the first request after startup):
+**Timing** (API and test client on one laptop, `results/api_timing.csv`; request 1 is the first request after startup):
 
 | Request | Trip | Points | Wall time (s) | Top-1 | Route precision | Route recall | Continuity |
 |---|---|---|---|---|---|---|---|
@@ -266,22 +277,32 @@ The static figures in sections 2.2 and 5 are drawn from the same layers (`report
 
 Time depends more on candidates per point than on the number of points: 00000009 has 1,049 points but 35.8 candidates per point and takes 7.5 s. The first request was not unusually slow (4.98 s for 2,503 points), because the model loads at startup and the Dijkstra cache is built per request.
 
-**[Placeholder: screenshot of the UI on Laptop 2 showing a predicted route and metrics]**
+**Two-laptop test.** We ran the API on Laptop 1 (`10.92.245.19:8000`) and the UI on Laptop 2 (`10.92.245.96`, served on port 5500) over the same network. Laptop 2 loaded the trip list and requested trips 00000000 and 00000040. The API console on Laptop 1 logged both requests with the client address: trip 00000000 (2,503 points) finished in 3,526.66 ms with Top-1 96.2%, and trip 00000040 (2,995 points) in 3,492.78 ms with Top-1 92.9%, the same accuracies as our offline evaluation.
 
-**[Placeholder: screenshot of the API console on Laptop 1 showing the logged requests]**
+![API console on Laptop 1: model loaded once at startup, then /health, /trips and two /predict requests from Laptop 2 (10.92.245.96)](screenshots/api_console_laptop1.jpeg)
+
+![UI static server on Laptop 2 (python -m http.server 5500)](screenshots/ui_server_laptop2.jpeg)
+
+![UI on Laptop 2, trip 00000040: API base URL set to Laptop 1, predicted route and server-computed metrics](screenshots/ui_trip40_overview.png)
+
+![UI on Laptop 2, trip 00000040 zoomed in: GPS points (blue) and predicted route (green)](screenshots/ui_trip40_zoom.png)
+
+![UI on Laptop 2, trip 00000000: whole route](screenshots/ui_trip0_overview.png)
+
+![UI on Laptop 2, trip 00000000 zoomed in](screenshots/ui_trip0_zoom.png)
 
 # Limitations
 
-- **Candidate miss rate on train is 0.1202** at R = 80 m, mostly from trip 00000054 (0.885 of its 19,313 points) and trips 00000093 (0.640) and 00000033 (0.513), where the GPS lies far from the reference route. These trips stay in training, with all their candidate rows labelled 0. On student_test the miss rate is 0.0045.
-- **Labels are derived**, not given: label mismatch rate 0.0856 (train) and 0.0903 (student_test). Every metric inherits this uncertainty.
-- **Speed and heading over time gaps:** `src/features.py` computes speed as displacement divided by the time step and heading from the previous point, regardless of the step. After a long gap (up to 153,064 s) speed is near 0 and heading is meaningless; the first point of each trip gets speed 0 and heading 0 degrees. We did not fix this.
-- **100,000-row fit subsample:** every classifier fit uses a fixed 100,000-row subsample of the 3,383,391 train candidate rows, for speed.
-- **student_test reuse:** student_test was used for the five-model comparison, the tuned vs untuned comparison and the HMM comparison, so its numbers are development results and optimistic as an estimate of evaluator performance. HMM parameters were tuned on train only (first 20 trips) with a classifier fitted on train trips, and beta was at the edge of its grid.
-- **U-turns:** the HMM does not penalise switching to the reverse twin arc, which caused the only HMM failure (trip 00000007).
+- Candidate miss rate on train is 0.1202 at R = 80 m, mostly from trip 00000054 (0.885 of its 19,313 points) and trips 00000093 (0.640) and 00000033 (0.513), where the GPS lies far from the reference route. These trips stay in training, with all their candidate rows labelled 0. On student_test the miss rate is 0.0045.
+- Labels are derived, not given: label mismatch rate 0.0856 (train) and 0.0903 (student_test). Every metric inherits this uncertainty.
+- Speed and heading over time gaps: `src/features.py` computes speed as displacement divided by the time step and heading from the previous point, regardless of the step. After a long gap (up to 153,064 s) speed is near 0 and heading is meaningless; the first point of each trip gets speed 0 and heading 0 degrees. We did not fix this.
+- 100,000-row fit subsample: every classifier fit uses a fixed 100,000-row subsample of the 3,383,391 train candidate rows, for speed.
+- student_test reuse: student_test was used for the five-model comparison, the tuned vs untuned comparison and the HMM comparison, so its numbers are development results and optimistic as an estimate of evaluator performance. HMM parameters were tuned on train only (first 20 trips) with a classifier fitted on train trips, and beta was at the edge of its grid.
+- U-turns: the HMM does not penalise switching to the reverse twin arc, which caused the only HMM failure (trip 00000007).
 
 # AI assistance
 
-We used an AI coding assistant (Claude Code) to help write and debug parts of the code (feature sweep, training, Bayesian optimisation and evaluation scripts, maps, EDA notebook, API checks) and to draft parts of this report. All experiments were run by the code in this repository, all numbers are read from the result files listed below, and every team member has reviewed and can explain the code and results.
+We used an AI coding assistant (Claude Code) while writing and debugging parts of the code and while drafting this report. All experiments were run with the code in this repository, the numbers are taken from the result files listed below, and each of us has gone through the code and results and can explain them.
 
 # Sources of tables and figures
 
@@ -300,4 +321,6 @@ We used an AI coding assistant (Claude Code) to help write and debug parts of th
 | 5 failure case | results/hmm_failures.csv, results/evaluate_hmm_log.txt |
 | 5 figures | report/figures/student_test_00000077_hmm_helps.png, report/figures/student_test_00000007_hmm_not_helping.png |
 | 6 maps | results/maps/*.html (code: src/maps.py) |
+| 2.2 and 6 Folium screenshots | report/figures/folium_*.png (from results/maps/*.html by report/screenshot_maps.py) |
 | 7 timing table and checks | results/api_timing.csv, results/api_console_log.txt |
+| 7 screenshots | report/screenshots/ (taken during the two-laptop test) |

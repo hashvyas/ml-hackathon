@@ -15,7 +15,14 @@ from reportlab.platypus import Image, ListFlowable, Paragraph, SimpleDocTemplate
 
 SRC, OUT = Path("report/report.md"), Path("report/report.pdf")
 styles = getSampleStyleSheet()
-body, small = styles["BodyText"], styles["BodyText"].clone("small", fontSize=7, leading=8.5)
+for name in ("BodyText", "Heading1", "Heading2", "Heading3", "Title"):  # plain black serif text throughout
+    styles[name].fontName = "Times-Bold" if name != "BodyText" else "Times-Roman"
+    styles[name].textColor = colors.black
+body = styles["BodyText"]
+body.fontSize, body.leading = 10.5, 13.5
+small = body.clone("small", fontSize=8, leading=9.5)
+caption = body.clone("caption", fontName="Times-Italic", fontSize=9, leading=11, alignment=1)
+author = body.clone("author", fontSize=11, leading=14, alignment=1)
 WIDTH = A4[0] - 3 * cm
 
 
@@ -25,30 +32,40 @@ def inline(text):
     return re.sub(r"`(.+?)`", r"<font face='Courier'>\1</font>", text)
 
 
-def table(lines):
+def table(lines, plain=False):
     rows = [[c.strip() for c in l.strip().strip("|").split("|")] for l in lines if not re.match(r"^\|[\s:|-]+\|$", l.strip())]
-    cells = [[Paragraph(inline(c), small) for c in r] for r in rows]
-    t = Table(cells, colWidths=[WIDTH / len(rows[0])] * len(rows[0]), repeatRows=1)
-    t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
-                           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eee8")),
-                           ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    if plain:  # author block: names over SRNs, no lines
+        return Table([[Paragraph(inline(c), author) for c in r] for r in rows], colWidths=[WIDTH / len(rows[0])] * len(rows[0]))
+    cells = [[Paragraph(("<b>%s</b>" if i == 0 else "%s") % inline(c), small) for c in r] for i, r in enumerate(rows)]
+    # column width follows its longest word, so words are not split across lines
+    weights = [max(11, max(len(r[j]) for r in rows) / 3, 1.3 * max(len(w) for r in rows for w in (r[j].split() or [""]))) for j in range(len(rows[0]))]
+    t = Table(cells, colWidths=[WIDTH * w / sum(weights) for w in weights], repeatRows=1)
+    t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.black), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     return t
 
 
-def image(path, caption):
+def image(path, text):
     img = Image(str(path))
     scale = min(WIDTH / img.imageWidth, 11 * cm / img.imageHeight, 1.0)
     img.drawWidth, img.drawHeight = img.imageWidth * scale, img.imageHeight * scale
-    return [img, Paragraph(f"<i>{inline(caption)}</i>", small), Spacer(1, 6)]
+    return [img, Paragraph(inline(text), caption), Spacer(1, 8)]
 
 
 def build():
     story, lines, i = [], SRC.read_text(encoding="utf-8").splitlines(), 0
     while i < len(lines):
         line = lines[i]
-        if line.startswith("#"):
+        if line.startswith("#") and not story:  # first heading is the title
+            story.append(Paragraph(inline(line.lstrip("#").strip()), styles["Title"]))
+        elif line.startswith("#"):
             level = min(len(line) - len(line.lstrip("#")), 3)
             story.append(Paragraph(inline(line.lstrip("#").strip()), styles[f"Heading{level}"]))
+        elif line.strip() == "<!-- plain -->":
+            block, i = [], i + 1
+            while i < len(lines) and lines[i].startswith("|"):
+                block.append(lines[i]); i += 1
+            story += [table(block, plain=True), Spacer(1, 12)]
+            continue
         elif line.startswith("|"):
             block = []
             while i < len(lines) and lines[i].startswith("|"):

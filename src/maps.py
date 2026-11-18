@@ -71,7 +71,8 @@ def make_map(trip, predicted_arcs=None, out_path=None, classifier_arcs=None, pre
               "<span style='color:#888'>&#9473;</span> Road network<br>"
               "<span style='color:green'>&#9473;</span> Reference route<br>"
               + ("<span style='color:orange'>&#9473;</span> Classifier-only route<br>" if classifier_arcs is not None else "")
-              + f"<span style='color:red'>&#9473;</span> {predicted_name}</div>")
+              + (f"<span style='color:red'>&#9473;</span> {predicted_name}" if predicted_arcs is not None else "")
+              + "</div>")
     m.get_root().html.add_child(folium.Element(legend))
 
     if out_path is not None:
