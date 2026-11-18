@@ -1,0 +1,8 @@
+{
+  "radius_m": 80.0,
+  "rule": "smallest R with miss_rate <= min + 0.005",
+  "train_obs_after_cleaning": 208417,
+  "invalid_rows_removed": 0,
+  "duplicate_timestamps_removed": 0,
+  "label_mismatch_rate": 0.08555444133635932
+}
