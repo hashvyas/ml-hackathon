@@ -30,7 +30,9 @@ def draw(trip, title, out, routes=()):
     proj = TripProjection.from_coordinates(tr.lon.values, tr.lat.values)
     gx, gy = proj.project(tr.lon.values, tr.lat.values)
     nx_, ny_ = proj.project(trip["nodes"][:, 0], trip["nodes"][:, 1])
-    m = 150
+    x0, y0 = gx.min(), gy.min()  # plot in km from the track's south-west corner
+    gx, gy, nx_, ny_ = (gx - x0) / 1000, (gy - y0) / 1000, (nx_ - x0) / 1000, (ny_ - y0) / 1000
+    m = 0.15
     inside = (nx_ > gx.min() - m) & (nx_ < gx.max() + m) & (ny_ > gy.min() - m) & (ny_ < gy.max() + m)
     arcs = trip["arcs"]
     near = arcs[inside[arcs[:, 0]] & inside[arcs[:, 1]]]
@@ -40,9 +42,9 @@ def draw(trip, title, out, routes=()):
         a = arcs[np.asarray([x for x in arc_ids if x >= 0])]
         ax.plot(np.c_[nx_[a[:, 0]], nx_[a[:, 1]]].T, np.c_[ny_[a[:, 0]], ny_[a[:, 1]]].T, color=color, lw=width, alpha=0.7)
         ax.plot([], [], color=color, lw=width, label=label)
-    ax.scatter(gx, gy, s=3, color="blue", label="GPS points", zorder=5)
+    ax.scatter(gx, gy, s=1, color="blue", alpha=0.35, label="GPS points", zorder=5)
     ax.plot([], [], color="#bbbbbb", label="road network")
-    ax.set_aspect("equal"); ax.set_xlabel("x (m, UTM)"); ax.set_ylabel("y (m, UTM)")
+    ax.set_aspect("equal"); ax.set_xlabel("x (km, UTM)"); ax.set_ylabel("y (km, UTM)")
     ax.set_title(title); ax.legend(loc="best", fontsize=8)
     fig.tight_layout(); fig.savefig(out, dpi=110); plt.close(fig)
     print("wrote", out)
