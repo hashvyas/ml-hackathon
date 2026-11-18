@@ -5,7 +5,7 @@
 |---|---|---|
 | PES2UG24CS569 | PES2UG24CS572 | PES2UG24CS572 |
 
-PES UE24CS352A Machine Learning hackathon report. We use two partitions: train (80 trips) for fitting and cross-validation, and student_test (10 trips) for development comparisons. The 10 evaluator trips were kept aside and not used for any result or choice in this report. All tables and figures are produced by code in the repository; the last section lists the file behind each one.
+PES UE24CS352A Machine Learning hackathon report. We use two partitions: train (80 trips) for fitting and cross-validation, and student_test (10 trips) for development comparisons. The 10 evaluator trips were kept aside and not used for any choice; two of them appear only as a final run in section 7. All tables and figures are produced by code in the repository; the last section lists the file behind each one.
 
 # 2.2 Dataset understanding and exploratory data analysis
 
@@ -291,6 +291,19 @@ Time depends more on candidates per point than on the number of points: 00000009
 
 ![UI on Laptop 2, trip 00000000 zoomed in](screenshots/ui_trip0_zoom.png)
 
+**Run on the evaluation set.** We then pointed the API at the evaluator trips (`EVAL_DIR`) and ran the same pipeline from the UI on Laptop 2, with no change to the model or HMM parameters. These trips were not used for training, tuning or any choice in this report; the results below are reported only, as shown by the UI:
+
+| Evaluator trip | Points | Top-1 | Macro F1 | Route precision | Route recall | Continuity | Time (ms) |
+|---|---|---|---|---|---|---|---|
+| 00000015 | 6,854 | 84.0% | 42.5% | 19.7% | 99.3% | 98.7% | 11,297.9 |
+| 00000049 | 2,642 | 99.8% | 99.1% | 99.0% | 99.8% | 99.4% | 4,782.61 |
+
+Trip 00000049 is matched almost perfectly. Trip 00000015 keeps a good Top-1 (84.0%) and recall (99.3%) but low route precision (19.7%) and macro F1 (42.5%): the route loops through a dense network of small paths, and the reconstructed route contains many arcs that are not on the reference, similar to our weakest student_test trip (00000077).
+
+![Evaluation set, trip 00000015: predicted route and server-computed metrics in the UI](screenshots/eval_ui_trip15.png)
+
+![Evaluation set, trip 00000049: predicted route and server-computed metrics in the UI](screenshots/eval_ui_trip49.png)
+
 # Limitations
 
 - Candidate miss rate on train is 0.1202 at R = 80 m, mostly from trip 00000054 (0.885 of its 19,313 points) and trips 00000093 (0.640) and 00000033 (0.513), where the GPS lies far from the reference route. These trips stay in training, with all their candidate rows labelled 0. On student_test the miss rate is 0.0045.
@@ -324,3 +337,4 @@ We used an AI coding assistant (Claude Code) while writing and debugging parts o
 | 2.2 and 6 Folium screenshots | report/figures/folium_*.png (from results/maps/*.html by report/screenshot_maps.py) |
 | 7 timing table and checks | results/api_timing.csv, results/api_console_log.txt |
 | 7 screenshots | report/screenshots/ (taken during the two-laptop test) |
+| 7 evaluation-set results | report/screenshots/eval_ui_trip15.png, report/screenshots/eval_ui_trip49.png (values read from the UI) |
