@@ -11,17 +11,31 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Image, ListFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 SRC, OUT = Path("report/report.md"), Path("report/report.pdf")
+
+# Palatino Linotype from Windows, embedded in the PDF; Times if it is not installed
+FONTS = Path("C:/Windows/Fonts")
+if (FONTS / "pala.ttf").is_file():
+    for name, file in [("Pala", "pala.ttf"), ("Pala-Bold", "palab.ttf"), ("Pala-Italic", "palai.ttf"), ("Pala-BoldItalic", "palabi.ttf")]:
+        pdfmetrics.registerFont(TTFont(name, str(FONTS / file)))
+    registerFontFamily("Pala", normal="Pala", bold="Pala-Bold", italic="Pala-Italic", boldItalic="Pala-BoldItalic")
+    REGULAR, BOLD, ITALIC = "Pala", "Pala-Bold", "Pala-Italic"
+else:
+    REGULAR, BOLD, ITALIC = "Times-Roman", "Times-Bold", "Times-Italic"
+
 styles = getSampleStyleSheet()
-for name in ("BodyText", "Heading1", "Heading2", "Heading3", "Title"):  # plain black serif text throughout
-    styles[name].fontName = "Times-Bold" if name != "BodyText" else "Times-Roman"
+for name in ("BodyText", "Heading1", "Heading2", "Heading3", "Title"):  # plain black text throughout
+    styles[name].fontName = BOLD if name != "BodyText" else REGULAR
     styles[name].textColor = colors.black
 body = styles["BodyText"]
-body.fontSize, body.leading = 10.5, 13.5
-small = body.clone("small", fontSize=8, leading=9.5)
-caption = body.clone("caption", fontName="Times-Italic", fontSize=9, leading=11, alignment=1)
+body.fontSize, body.leading = 10.5, 14
+small = body.clone("small", fontSize=8, leading=10)
+caption = body.clone("caption", fontName=ITALIC, fontSize=9, leading=11.5, alignment=1)
 author = body.clone("author", fontSize=11, leading=14, alignment=1)
 WIDTH = A4[0] - 3 * cm
 
@@ -40,7 +54,9 @@ def table(lines, plain=False):
     # column width follows its longest word, so words are not split across lines
     weights = [max(11, max(len(r[j]) for r in rows) / 3, 1.3 * max(len(w) for r in rows for w in (r[j].split() or [""]))) for j in range(len(rows[0]))]
     t = Table(cells, colWidths=[WIDTH * w / sum(weights) for w in weights], repeatRows=1)
-    t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.black), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+                           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),  # grey header row
+                           ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     return t
 
 
@@ -76,7 +92,7 @@ def build():
             items = []
             while i < len(lines) and lines[i].startswith("- "):
                 items.append(Paragraph(inline(lines[i][2:]), body)); i += 1
-            story.append(ListFlowable(items, bulletType="bullet", leftIndent=12))
+            story.append(ListFlowable(items, bulletType="bullet", leftIndent=12, bulletFontName=REGULAR))
             continue
         elif m := re.match(r"!\[(.*)\]\((.+)\)", line):
             path = (SRC.parent / m.group(2)).resolve()
