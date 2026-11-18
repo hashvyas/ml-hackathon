@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PathSnap | Map Matcher</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    >
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">PathSnap</p>
+        <h1>GPS map matching</h1>
+      </div>
+      <span id="predictor-badge" class="badge">API not connected</span>
+    </header>
+
+    <main>
+      <section class="controls card" aria-label="Prediction controls">
+        <label class="field api-field">
+          <span>API base URL</span>
+          <input id="api-url" type="url" value="http://127.0.0.1:8000" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Trip</span>
+          <select id="trip-select" disabled>
+            <option value="">Connect to API to load trips</option>
+          </select>
+        </label>
+        <button id="refresh-button" class="button secondary" type="button">Load trips</button>
+        <button id="predict-button" class="button primary" type="button" disabled>Predict route</button>
+      </section>
+
+      <p id="status" class="status" role="status">Enter the API address and load the available trips.</p>
+
+      <section class="dashboard">
+        <div class="card map-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Route preview</p>
+              <h2>Predicted path</h2>
+            </div>
+            <div class="legend">
+              <span><i class="dot gps-dot"></i>GPS</span>
+              <span><i class="dot route-dot"></i>Predicted route</span>
+            </div>
+          </div>
+          <div id="map" aria-label="Map showing GPS observations and predicted route"></div>
+        </div>
+
+        <aside class="side-column">
+          <section class="card metrics-card">
+            <p class="eyebrow">Evaluation</p>
+            <h2>Trip metrics</h2>
+            <div id="metrics" class="metrics-grid">
+              <p class="empty-state">Run a trip to see its metrics.</p>
+            </div>
+          </section>
+          <section class="card segments-card">
+            <p class="eyebrow">Decoder output</p>
+            <h2>Predicted segments</h2>
+            <p id="segment-summary" class="empty-state">No route loaded.</p>
+            <ol id="segments" class="segments-list"></ol>
+          </section>
+        </aside>
+      </section>
+      <p class="privacy-note">The UI displays only the predicted route and server-computed metrics. Reference labels are never sent to or drawn by the browser.</p>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="app.js"></script>
+  </body>
+</html>
