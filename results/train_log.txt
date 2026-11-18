@@ -1,0 +1,14 @@
+NOTE: each fit uses a fixed random subsample of 100000 rows (of 3383391 train rows, seed 42); validation/test use all rows.
+LogisticRegression done in 19.2 s
+GaussianNB done in 25.5 s
+KNN done in 769.2 s
+RandomForest done in 40.0 s
+HistGradientBoosting done in 11.8 s
+               model  cv_macro_f1_mean  cv_macro_f1_std  cv_macro_f1_oof  cv_log_loss  cv_top1  test_macro_f1  test_log_loss  test_top1  train_time_s  infer_time_s
+  LogisticRegression            0.8308           0.0286           0.8293       0.0927   0.7214         0.8480         0.0773     0.7977        0.2205        0.0655
+          GaussianNB            0.7682           0.0158           0.7682       0.3449   0.6687         0.7701         0.3137     0.7341        0.0599        0.2739
+                 KNN            0.8229           0.0224           0.8211       0.1606   0.6763         0.8336         0.1387     0.7461        0.1875       84.9219
+        RandomForest            0.8749           0.0296           0.8731       0.0774   0.7294         0.8924         0.0730     0.8044        4.2484        0.6772
+HistGradientBoosting            0.8767           0.0289           0.8752       0.0666   0.7312         0.8901         0.0544     0.8029        0.2888        0.2289
+
+CHOSEN: HistGradientBoosting - highest CV macro F1 (0.8767 +- 0.0289, train trips only). student_test check: macro F1 0.8901, Top-1 0.8029, log loss 0.0544. Best test Top-1 overall: RandomForest.
